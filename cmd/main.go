@@ -9,8 +9,8 @@ import (
 )
 
 func main() {
-	q := queue.NewQueue()
-	server := api.NewServer(q)
+	queueManager := queue.NewQueueManager()
+	server := api.NewServer(queueManager)
 
 	http.HandleFunc("/queue", func(w http.ResponseWriter, r *http.Request) {
 		switch r.Method {
@@ -18,6 +18,17 @@ func main() {
 			server.PublishHandler(w, r)
 		case http.MethodGet:
 			server.ConsumeHandler(w, r)
+		default:
+			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		}
+	})
+
+	http.HandleFunc("/queues", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			server.CreateQueueHandler(w, r)
+		case http.MethodGet:
+			server.ListQueuesHandler(w, r)
 		default:
 			http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 		}
