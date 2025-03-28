@@ -12,10 +12,20 @@ type QueueManager struct {
 }
 
 type Queue struct {
-	id       int
-	name     string
-	messages []string // TODO: Make generic!
-	mutex    sync.Mutex
+	id          int
+	name        string
+	messages    []string // TODO: Make generic!
+	subscribers []chan string
+	mutex       sync.Mutex
+}
+
+func (q *Queue) AddSubscriber() chan string {
+	q.mutex.Lock()
+	defer q.mutex.Unlock()
+
+	subscriber := make(chan string)
+	q.subscribers = append(q.subscribers, subscriber)
+	return subscriber
 }
 
 func NewQueueManager() *QueueManager {
@@ -70,6 +80,12 @@ func (q *Queue) Publish(message string) {
 	q.mutex.Lock()
 	defer q.mutex.Unlock()
 	q.messages = append(q.messages, message)
+
+	for _, subscriber := range q.subscribers {
+		go func(sub chan string) {
+			sub <- message
+		}(subscriber)
+	}
 }
 
 func (q *Queue) Consume() (string, bool) {
